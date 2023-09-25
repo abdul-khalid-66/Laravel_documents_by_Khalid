@@ -1,0 +1,273 @@
+Multi authentication using Breeze package
+
+
+Step 1: Create a Laravel project named "Laravel_realestate_project."
+
+
+
+sStep 2: Install Laravel Breeze using Composer:
+							=> composer require laravel/breeze --dev
+
+step 3 . After Composer has installed the Laravel Breeze package, you may run the breeze:install Artisan command. This 	command publishes the authentication views, routes, controllers, and other resources to your application. Laravel 	Breeze publishes all of its code to your application so that you have full control and visibility over its features and implementation. 
+		=> php artisan breeze:install
+
+give the answer for the bellow few questions after running php artisan breeze:install
+
+  Which Breeze stack would you like to install?
+  Blade with Alpine ...................... blade  
+  React with Inertia ..................... react  
+  Vue with Inertia ....................... vue  
+  API only ............................... api  
+
+❯ blade
+
+
+  Would you like dark mode support? (yes/no) [no]
+❯ no
+
+  Which testing framework do you prefer? [PHPUnit]
+  PHPUnit ........................... 0  
+  Pest............................... 1  
+❯ 0
+
+
+
+Step 4: Update the database/migrations/xxxxxxx_create_users_table.php file to define the users table schema.
+	    $table->id();
+            $table->string('name');
+            $table->string('username')->nullable();
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('photo')->nullable();
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
+            $table->enum('role',['admin','agent','user'])->default('user');
+            $table->enum('status',['active','inactive'])->default('active');
+            $table->rememberToken();
+            $table->timestamps();
+
+
+	
+
+Step 5: Change the $fillable property in the App/Models/User.php model to an empty array:
+	     -> protected $fillable = [
+      			'name',
+        		'email',
+        		'password',
+    		];
+		Into protected 
+			-> $guarded =[];
+
+Step 6: Configure your database and run the database migrations:
+
+Step 7: Create a user seeder named UsersTableSeeder:
+	create UsersTableSeeder 
+		-> php artisan make:seeder UsersTableSeeder
+
+Step 8: Populate the Users table with seed data in the UsersTableSeeder class. Add data for admin, agent, and user roles. 
+
+	 public function run(): void
+    		{
+        	DB::table('users')->insert([
+            	//admin
+            	[
+                	'name' => "admin",
+               		'username' => 'admin',
+                	'email' => 'admin@gmail.com',
+                	'password' => Hash::make('123'),
+                	'role' => 'amdin',
+                	'status' => 'active'
+            	],
+
+	            // Agent
+        	    [
+                	'name' => "agent",
+	                'username' => 'agent',
+        	        'email' => 'agent@gmail.com',
+                	'password' => Hash::make('123'),
+                	'role' => 'agent',
+                	'status' => 'active'
+            	],
+
+	            //user
+        	    [
+                	'name' => "user",
+                	'username' => 'user',
+                	'email' => 'user@gmail.com',
+                	'password' => Hash::make('123'),
+                	'role' => 'user',
+                	'status' => 'active'
+            	]
+        	]);
+	    }
+
+
+
+
+step 9 . Now you shoud add some random data using factory fack data in database/factories/UserFactory.php
+
+	public function definition(): array
+    	{
+            return [
+            	'name' => fake()->name(),
+            	'email' => fake()->unique()->safeEmail(),
+            	'email_verified_at' => now(),
+            	'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
+            	'phone' => fake()->phoneNumber,
+            	'photo' => fake()->imageUrl('60','60'),
+            	'address' => fake()->address(),
+            	'role' => fake()->randomElement(['admin','agent','user']),
+            	'status' => fake()->randomElement(['active','inactive']),
+            	'remember_token' => Str::random(10),
+            
+        	];
+    	}
+
+
+		
+Step 10: Uncomment the default function in the DatabaseSeeder.php file and call the UsersTableSeeder class. Generate user fake data using the factory.
+
+ 
+		
+		$this->call(UsersTableSeeder::class); 
+
+	and then generate user fack data
+
+		\App\Models\User::factory(10)->create();
+		
+step 11 . Refresh the migration and run seeder command:
+	php artisan migrate:fresh --seed
+
+
+
+
+
+Step 12: Create two folders in the views directory, one for the admin dashboard and one for the agent dashboard.
+
+
+step 13 . Create the route for admin dashboard 
+		Route::get('admin/adminDashboard',[AdminDashboard::class,'adminDashboard'])->name(admin.dashboare);
+
+
+Step 14: Create controllers for the admin and agent dashboards:
+		php artisan make:controller adminController
+		php artisan make:controller agentController
+
+
+Step 15: Define the adminDashboard and agentDashboard methods inside their respective controllers.
+	public function AdminDashboard(){
+        	return view('admin.adminDashboard');
+    	}
+
+step 16 . create the agentDashboard inside the agentController like
+	public function agentDashboard(){
+        	return view('agent.agentDashboard');
+    	}
+
+
+
+step 17 . copy /admin/dashboard from ("step 13") route and past in url you will redired to adminDashboard
+	and
+          copy /agent/dashboard from ("step 13") route and past in url you will redired to adminDashboard
+
+
+step 18 .  inside the app/Http/controllers/Auth/AuthenticatedSessionController add some changes
+
+
+		insde store fucntion the default code will be showing like
+ 
+		public function store(LoginRequest $request):RedirectResponse
+		{
+		$request->authenticate();
+		$request->session()->regenerate();
+			
+		return redirect()->intended(RouteServiceProvider::HOME);
+		
+		}
+
+but you shoud add chagens to this like
+
+		public function store(LoginRequest $request):RedirectResponse
+		{
+		$request->authenticate();
+		$request->session()->regenerate();
+			
+
+you shoud add this code->
+		
+		$url = "";
+		if($request->user()->role === 'admin'){
+		$url = 'admin/dashboard';
+		}elseif($request->user()->role === 'agent'){
+		$url = 'agent/dashboard';
+		}elseif($request->user()->role === 'user'){
+		$url = '/dashboard';
+		}
+
+		return redirect()->intended($url);
+ 			
+		
+		}
+
+
+
+Step 19: Create a middleware named Role to protect routes based on user roles. we need to protected it when we login as user than protect the admin and agent dashboar 	route user will be not able to access to admin and agent dashboard
+	so for that You need to use middleware
+
+	php artisan make:middleware Role
+
+
+step 20 . Now first of all register your middleware in kernel
+			'role' => \App\Http\Middleware\Role::class, into "middlewareAliases" which is inside 		App/Http/Kernel.php
+
+step 21 . Now in middleware add some change in Role.php and add role parameter to handle function
+
+     public function handle(Request $request, Closure $next , $role): Response
+    {
+        // dd($request->user()->role);
+        if($request->user()->role != $role){
+            return redirect('/dashboard');
+        }
+        return $next($request);
+    }
+
+
+
+step 22 . Group routes for admin, agent, and user roles using middleware in the routes/web.php file.
+		Route::middleware(['auth','role:admin'])->group(function(){
+		add all routed releated to admin only
+		});
+		
+		same for ganent and user
+ 
+		Route::middleware(['auth','role:agent'])->group(function(){
+		add all routed releated to agent only
+		});
+
+middleware auth default chack that user is login or not and the other is check role
+
+
+
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
